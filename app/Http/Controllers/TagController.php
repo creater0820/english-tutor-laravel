@@ -8,7 +8,10 @@ class TagController extends Controller
 {
     public function getTags()
     {
-        $tags = Tag::get();
+        $tagArray = [
+            1,2,3,4,5
+        ];
+        $tags = Tag::whereIn('id',$tagArray)->get();
         return response()->json([
             'tags' => $tags,
         ]);

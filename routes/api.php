@@ -37,3 +37,4 @@ Route::apiResource('message','MessageController');
 Route::get('plan/lesson/{id}','PlanController@getLessons');
 Route::get('categories','CategoryController@getCategories');
 Route::get('tags','TagController@getTags');
+Route::apiResource('teacherplan','TeacherPlanController');

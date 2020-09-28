@@ -12,6 +12,7 @@ use App\Model\Tag;
 use App\Model\StudentPlan;
 use App\Model\PlanTag;
 use Carbon\Carbon;
+use App\Rule;
 
 
 class StudentPlanController extends Controller
@@ -36,14 +37,16 @@ class StudentPlanController extends Controller
 
     public function getStudentPlan(Request $request)
     {
-        $fewHoursAgo = Carbon::now()->subHours(360000);
+        if (empty($request->input('from_member_id'))) {
+            $fewHoursAgo = Carbon::now()->subHours(360000);
+            $studentPlans = StudentPlan::whereIn('id', [21, 22,23,24,25,28,27,])->with(['member', 'studentPlanTags', 'studentPlanTags.tag'])->where('created_at', '>', $fewHoursAgo)->orderBy('created_at', 'desc')->limit(10)->get();
 
-        $memberTags = MemberTag::where('member_id', $request->input(('from_member_id')))->pluck('tag_id')->toArray();
-        // todo取れない
-        // $memberTags = MemberTag::getMemberTag($request);
-
-        $studentPlanTags = StudentPlanTag::whereIn('tag_id', $memberTags)->pluck('studentplan_id');
-        $studentPlans = StudentPlan::whereIn('id', $studentPlanTags)->with(['member', 'studentPlanTags', 'studentPlanTags.tag'])->where('created_at', '>', $fewHoursAgo)->orderBy('created_at', 'desc')->limit(6)->get();
+        } else {
+            $fewHoursAgo = Carbon::now()->subHours(360000);
+            $memberTags = MemberTag::where('member_id', $request->input(('from_member_id')))->pluck('tag_id')->toArray();
+            $studentPlanId = StudentPlanTag::whereIn('tag_id', $memberTags)->pluck('studentplan_id');
+            $studentPlans = StudentPlan::whereIn('id', $studentPlanId)->with(['member', 'studentPlanTags', 'studentPlanTags.tag'])->where('created_at', '>', $fewHoursAgo)->orderBy('created_at', 'desc')->limit(10)->get();
+        }
 
         return response()->json([
             'student_plans' => $studentPlans,
@@ -66,6 +69,7 @@ class StudentPlanController extends Controller
     }
     public function store(Request $request)
     {
+        $this->validate($request, Rule::validationRule('plan'), Rule::memberStoreMessages());
         if (!empty($request->input('token'))) {
             $user = User::where('remember_token', $request->input('token'))->with(['member'])->first();
             if (!empty($user->member->id)) {
@@ -79,8 +83,7 @@ class StudentPlanController extends Controller
                 $studentPlan->save();
             }
         }
-        if (!empty($request->input('categories')) && !empty($studentPlan->id)) {
-        }
+
         if (!empty($request->input('tags'))  && !empty($studentPlan->id)) {
             $tagsData = $request->input('tags');
             $insert = [];
@@ -93,35 +96,21 @@ class StudentPlanController extends Controller
                 ];
             }
             StudentPlanTag::insert($insert);
-
-            // $tagName = [];
-            // switch($tagData){
-            //     case "1":
-            //         $tagName[] = "簿記";
-            //     case "2":
-            //         $tagName[] = "税理士";
-            //     case "3":
-            //         $tagName[] = "行政書士";
-            //     case "4":
-            //         $tagName[] = "司法書士";
-            //     case "5":
-            //         $tagName[] = "宅地建物取引士";
-            //     case "6":
-            //         $tagName[] = "弁護士";
-            //     case "6":
-            //         $tagName[] = "社会保険労務士";
-            // }
         }
         return response()->json([], 200);
     }
 
     public function getStudentPlanFromTag(Request $request)
     {
-        $tag = Tag::getTagId($request)->get();
-        $planTag = PlanTag::getPlanTag($tag)->pluck('plan_id')->toArray();
-        $searchResults =  StudentPlan::getPlan($planTag)->get();
+        // $tag = Tag::getTagId($request)->get();
+        $planTag = StudentPlanTag::getPlanTag($request->input('tag_id'))->pluck('studentplan_id')->toArray();
+        $searchResults =  StudentPlan::getPlan($planTag)->with(['member', 'studentPlanTags', 'studentPlanTags.tag'])->get();
+
+        $paginatedPlan = StudentPlan::getPlan($planTag)->with(['member', 'studentPlanTags', 'studentPlanTags.tag'])->orderBy('created_at', 'desc')->paginate(10, ['*'], 'page', $request->input('current_page'));
+
         return response()->json([
             'search_results' => $searchResults,
+            'paginated_plan' => $paginatedPlan,
         ], 200);
     }
 }

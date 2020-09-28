@@ -32,14 +32,7 @@ class StudentPlan extends Model
             'category_type'
         );
     }
-    public function studentPlanTag()
-    {
-        return $this->hasOne(
-            'App\Model\StudentPlanTag',
-            'studentplan_id',
-            'id'
-        );
-    }
+  
     public function studentPlanTags()
     {
         return $this->hasMany(

@@ -18,6 +18,11 @@ class StudentPlanTag extends Model
         );
     }
 
+    public static function getPlanTag($tagId)
+    {
+        return self::whereIn('tag_id', $tagId);
+    }
+
     public function getTagNameAttribute()
     {
         if ($this->tag) {

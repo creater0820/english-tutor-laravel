@@ -46,4 +46,14 @@ class Member extends Model
     {
         return Carbon::now()->diffInMinutes($this->created_at);
     }
+    public function memberReviews()
+    {
+        return $this->hasMany(
+            'App\Model\MemberReview',
+            'member_id',
+            'id',
+        );
+    }
+   
+ 
 }

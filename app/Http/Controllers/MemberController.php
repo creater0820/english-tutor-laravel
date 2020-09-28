@@ -34,6 +34,15 @@ class MemberController extends Controller
     public function store(Request $request)
     {
         $this->validate($request, Rule::memberStoreRules('create'), Rule::memberStoreMessages());
+        $count = User::where('email', $request->input('email'))->count();
+        if ($count) {
+            return response()->json(
+                [
+                    'errors' => ['email' => ['このメールアドレスは既に登録されています']]
+                ],
+                422
+            );
+        }
         $user = new User();
         $user->name = $request->input('name');
         $user->email = $request->input('email');
@@ -49,7 +58,7 @@ class MemberController extends Controller
         $member->language_type = 0;
         $member->educational_background = "";
         $member->qualification = "";
-        $member->icon = "";
+        $member->icon = "/storage/images/account_circle-black-24dp.svg";
         // $member->picture = "";
         // $member->image = $request->input('image');
         $member->save();
@@ -95,16 +104,15 @@ class MemberController extends Controller
     // }
     public function popularTeacherShow(Request $request)
     {
-        $memberTags = MemberTag::where('member_id', $request->input(('from_member_id')))->pluck('tag_id')->toArray();
-
-        $memberId = Plan::whereExists(function ($q) use ($memberTags) {
-            $q->select('plans.id')->from('plan_tags')->whereColumn('plans.id', '=', 'plan_tags.plan_id')->whereIn('plan_tags.tag_id', $memberTags);
-        })->pluck('member_id')->toArray();
-
-        // $planIds = PlanTag::whereIn('tag_id', $memberTags)->pluck('plan_id')->toArray();
-        // $memberId = Plan::whereIn('id', $planIds)->pluck('member_id')->toArray();
-        $reccomendTeachers = Member::whereIn('id', $memberId)->limit(9)->get();
-
+        if (empty($request->input('from_member_id'))) {
+            $reccomendTeachers = Member::whereIn('id', [1, 2, 3,4,5,6,7,8,12])->get();
+        } else {
+            $memberTags = MemberTag::where('member_id', $request->input(('from_member_id')))->pluck('tag_id')->toArray();
+            $memberId = Plan::whereExists(function ($q) use ($memberTags) {
+                $q->select('plans.id')->from('plan_tags')->whereColumn('plans.id', '=', 'plan_tags.plan_id')->whereIn('plan_tags.tag_id', $memberTags);
+            })->pluck('member_id')->toArray();
+            $reccomendTeachers = Member::whereIn('id', $memberId)->limit(9)->get();
+        }
         return  response()->json([
             'reccomend_teachers' => $reccomendTeachers,
         ], 200);

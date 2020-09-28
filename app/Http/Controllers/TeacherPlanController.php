@@ -8,12 +8,14 @@ use App\Model\TeacherPlanTag;
 use App\Model\Tag;
 use App\Model\User;
 use Carbon\Carbon;
+use App\Rule;
 
 class TeacherPlanController extends Controller
 {
 
     public function store(Request $request)
     {
+        $this->validate($request, Rule::validationRule('plan'), Rule::memberStoreMessages());
         if (!empty($request->input('token'))) {
             $user = User::where('remember_token', $request->input('token'))->with(['member'])->first();
             if (!empty($user->member->id)) {

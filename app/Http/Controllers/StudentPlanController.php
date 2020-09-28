@@ -12,6 +12,7 @@ use App\Model\Tag;
 use App\Model\StudentPlan;
 use App\Model\PlanTag;
 use Carbon\Carbon;
+use App\Rule;
 
 
 class StudentPlanController extends Controller
@@ -36,13 +37,19 @@ class StudentPlanController extends Controller
 
     public function getStudentPlan(Request $request)
     {
-        $fewHoursAgo = Carbon::now()->subHours(360000);
-        $memberTags = MemberTag::where('member_id', $request->input(('from_member_id')))->pluck('tag_id')->toArray();
-        $studentPlanId = StudentPlanTag::whereIn('tag_id', $memberTags)->pluck('studentplan_id');
-        $studentPlans = StudentPlan::whereIn('id', $studentPlanId)->with(['member', 'studentPlanTags', 'studentPlanTags.tag'])->where('created_at', '>', $fewHoursAgo)->orderBy('created_at', 'desc')->limit(6)->get();
+        if (empty($request->input('from_member_id'))) {
+            $fewHoursAgo = Carbon::now()->subHours(360000);
+            $studentPlans = StudentPlan::whereIn('id', [21, 22,23,24,25,28,27,])->with(['member', 'studentPlanTags', 'studentPlanTags.tag'])->where('created_at', '>', $fewHoursAgo)->orderBy('created_at', 'desc')->limit(10)->get();
+
+        } else {
+            $fewHoursAgo = Carbon::now()->subHours(360000);
+            $memberTags = MemberTag::where('member_id', $request->input(('from_member_id')))->pluck('tag_id')->toArray();
+            $studentPlanId = StudentPlanTag::whereIn('tag_id', $memberTags)->pluck('studentplan_id');
+            $studentPlans = StudentPlan::whereIn('id', $studentPlanId)->with(['member', 'studentPlanTags', 'studentPlanTags.tag'])->where('created_at', '>', $fewHoursAgo)->orderBy('created_at', 'desc')->limit(10)->get();
+        }
+
         return response()->json([
             'student_plans' => $studentPlans,
-            'member_tags' => $memberTags ,
         ], 200);
     }
     public function show(Request $request, $id)
@@ -62,6 +69,7 @@ class StudentPlanController extends Controller
     }
     public function store(Request $request)
     {
+        $this->validate($request, Rule::validationRule('plan'), Rule::memberStoreMessages());
         if (!empty($request->input('token'))) {
             $user = User::where('remember_token', $request->input('token'))->with(['member'])->first();
             if (!empty($user->member->id)) {
@@ -75,7 +83,7 @@ class StudentPlanController extends Controller
                 $studentPlan->save();
             }
         }
-    
+
         if (!empty($request->input('tags'))  && !empty($studentPlan->id)) {
             $tagsData = $request->input('tags');
             $insert = [];
@@ -98,7 +106,7 @@ class StudentPlanController extends Controller
         $planTag = StudentPlanTag::getPlanTag($request->input('tag_id'))->pluck('studentplan_id')->toArray();
         $searchResults =  StudentPlan::getPlan($planTag)->with(['member', 'studentPlanTags', 'studentPlanTags.tag'])->get();
 
-        $paginatedPlan = StudentPlan::getPlan($planTag)->with(['member', 'studentPlanTags', 'studentPlanTags.tag'])->orderBy('created_at','desc')->paginate(10, ['*'], 'page', $request->input('current_page'));
+        $paginatedPlan = StudentPlan::getPlan($planTag)->with(['member', 'studentPlanTags', 'studentPlanTags.tag'])->orderBy('created_at', 'desc')->paginate(10, ['*'], 'page', $request->input('current_page'));
 
         return response()->json([
             'search_results' => $searchResults,
